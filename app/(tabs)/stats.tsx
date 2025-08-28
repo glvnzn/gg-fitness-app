@@ -120,8 +120,7 @@ export default function StatsScreen() {
           <View 
             width={8} 
             height={8} 
-            br4 
-            style={{ backgroundColor: iconColor }} 
+            style={{ backgroundColor: iconColor, borderRadius: 4 }} 
             marginB-8
           />
           <Text caption grey60 marginB-8 center>
@@ -207,7 +206,7 @@ export default function StatsScreen() {
             <View row spread centerV paddingV-12 style={{ borderBottomWidth: 1, borderBottomColor: Colors.grey20 }}>
               <Text body2 grey70>Completed Sessions</Text>
               <View row centerV>
-                <View width={6} height={6} br3 bg-success marginR-8 />
+                <View width={6} height={6} style={{ borderRadius: 3 }} bg-success marginR-8 />
                 <Text body2 grey90 style={{ fontWeight: '600' }}>
                   {stats.completedSessions}
                 </Text>
@@ -217,7 +216,7 @@ export default function StatsScreen() {
             <View row spread centerV paddingV-12>
               <Text body2 grey70>Cancelled Sessions</Text>
               <View row centerV>
-                <View width={6} height={6} br3 bg-error marginR-8 />
+                <View width={6} height={6} style={{ borderRadius: 3 }} bg-error marginR-8 />
                 <Text body2 grey90 style={{ fontWeight: '600' }}>
                   {stats.totalSessions - stats.completedSessions}
                 </Text>
@@ -246,9 +245,8 @@ export default function StatsScreen() {
                 <Card 
                   key={session.id} 
                   padding-16 
-                  br16 
                   bg-white 
-                  style={{ shadowColor: Colors.grey40, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
+                  style={{ borderRadius: 16, shadowColor: Colors.grey40, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 }}
                 >
                   <View row spread centerV marginB-8>
                     <Text body1 grey90 style={{ fontWeight: '600' }}>
@@ -275,7 +273,7 @@ export default function StatsScreen() {
                   
                   {session.endTime && (
                     <View row centerV>
-                      <View width={4} height={4} br2 bg-primary marginR-8 />
+                      <View width={4} height={4} style={{ borderRadius: 2 }} bg-primary marginR-8 />
                       <Text caption grey70>
                         Duration: {formatTime(Math.floor((session.endTime - session.startTime) / (1000 * 60)))}
                       </Text>

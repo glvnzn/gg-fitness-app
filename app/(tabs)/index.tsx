@@ -1,23 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, ScrollView, Animated } from 'react-native';
 import { 
   View, 
   Text, 
-  Card, 
-  Button, 
   Colors, 
-  TouchableOpacity,
-  Carousel
+  TouchableOpacity
 } from 'react-native-ui-lib';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring,
-  withRepeat,
-  withSequence
-} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
+import { StaticCircularTimer } from '@/components/StaticCircularTimer';
 import { CustomPlanModal } from '@/components/CustomPlanModal';
 import { useFasting } from '@/hooks/useFasting';
 import { FastingPlan } from '@/types/fasting';
@@ -39,9 +31,8 @@ export default function HomeScreen() {
   const [, setCurrentTime] = useState(Date.now());
   const [showCustomModal, setShowCustomModal] = useState(false);
   
-  // Animation values
-  const pulseScale = useSharedValue(1);
-  const progressAnimation = useSharedValue(0);
+  // Standard React Native animations instead of Reanimated
+  const [fadeAnim] = useState(new Animated.Value(0));
 
   // Update timer every second
   useEffect(() => {
@@ -52,35 +43,14 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
-  // Pulse animation for active fasting
+  // Entrance animation
   useEffect(() => {
-    if (fastingState.isActive) {
-      pulseScale.value = withRepeat(
-        withSequence(
-          withSpring(1.05, { duration: 1000 }),
-          withSpring(1, { duration: 1000 })
-        ),
-        -1,
-        false
-      );
-    } else {
-      pulseScale.value = withSpring(1);
-    }
-  }, [fastingState.isActive, pulseScale]);
-
-  // Progress animation
-  useEffect(() => {
-    if (fastingState.isActive) {
-      const progress = getCurrentProgress();
-      progressAnimation.value = withSpring(progress.percentage / 100);
-    } else {
-      progressAnimation.value = withSpring(0);
-    }
-  }, [fastingState.isActive, getCurrentProgress, progressAnimation]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
   if (loading) {
     return (
@@ -93,7 +63,13 @@ export default function HomeScreen() {
   const progress = getCurrentProgress();
   const stats = getStats();
 
-  const handlePlanSelect = (plan: FastingPlan) => {
+  const handlePlanSelect = async (plan: FastingPlan) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (e) {
+      // Haptics not available, continue silently
+    }
+    
     if (plan.id === 'custom') {
       setShowCustomModal(true);
     } else {
@@ -105,25 +81,68 @@ export default function HomeScreen() {
     saveCustomPlan(customPlan);
   };
 
-  const handleStartFasting = () => {
+  const handleStartFasting = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch (e) {
+      // Haptics not available, continue silently
+    }
+    
     Alert.alert(
       'Start Fasting',
       `Begin ${fastingState.selectedPlan.name} fast?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Start', onPress: () => startFasting() }
+        { 
+          text: 'Start', 
+          onPress: async () => {
+            try {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (e) {
+              // Haptics not available, continue silently
+            }
+            startFasting();
+          }
+        }
       ]
     );
   };
 
-  const handleStopFasting = () => {
+  const handleStopFasting = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    } catch (e) {
+      // Haptics not available, continue silently
+    }
+    
     Alert.alert(
       'End Fast',
       'Complete your fasting session?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Complete', onPress: stopFasting },
-        { text: 'Cancel Fast', onPress: cancelFasting, style: 'destructive' }
+        { 
+          text: 'Complete', 
+          onPress: async () => {
+            try {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch (e) {
+              // Haptics not available, continue silently
+            }
+            stopFasting();
+          }
+        },
+        { 
+          text: 'Cancel Fast', 
+          onPress: async () => {
+            try {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            } catch (e) {
+              // Haptics not available, continue silently
+            }
+            cancelFasting();
+          }, 
+          style: 'destructive' 
+        }
       ]
     );
   };
@@ -147,178 +166,207 @@ export default function HomeScreen() {
   };
 
   return (
-    <View flex bg-grey10 padding-20>
-      {/* Header */}
-      <View centerH marginB-30 marginT-20>
-        <Text h1 grey90 marginB-8>Fasting Tracker</Text>
-        <Text h4 grey60 marginB-20>{fastingState.selectedPlan.name} Plan</Text>
-        
-        {/* Streak Cards */}
-        <View row gap-16>
-          <Card padding-16 br40 bg-white style={{ shadowColor: Colors.grey40, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
-            <View centerH>
-              <Text h2 primary marginB-4>{stats.currentStreak}</Text>
-              <Text caption grey60>Current Streak</Text>
+    <View flex>
+      <LinearGradient
+        colors={[Colors.grey10, Colors.white]}
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View style={{ opacity: fadeAnim }}>
+            {/* Header */}
+            <View centerH marginB-24>
+              <Text 
+                style={{ 
+                  fontSize: fastingState.isActive ? 24 : 28, 
+                  fontWeight: fastingState.isActive ? '600' : '300', 
+                  color: fastingState.isActive ? Colors.primary : Colors.grey90,
+                  marginBottom: 4
+                }}
+              >
+                {fastingState.isActive ? 'Fasting in Progress' : 'Intermittent Fasting'}
+              </Text>
+              <Text body1 grey60>
+                {fastingState.selectedPlan.name} • {fastingState.selectedPlan.description}
+              </Text>
+              {fastingState.isActive && (
+                <View centerH marginT-8>
+                  <View 
+                    style={{
+                      backgroundColor: Colors.success,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 20,
+                    }}
+                  >
+                    <Text caption white style={{ fontWeight: '600' }}>
+                      ⏱️ Active Fast
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
-          </Card>
-          <Card padding-16 br40 bg-white style={{ shadowColor: Colors.grey40, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
-            <View centerH>
-              <Text h2 secondary marginB-4>{stats.longestStreak}</Text>
-              <Text caption grey60>Best Streak</Text>
-            </View>
-          </Card>
-        </View>
-      </View>
 
-      {/* Progress Circle */}
-      <View centerH marginB-40>
-        <Animated.View style={[pulseStyle]}>
-          <Card
-            padding-0
-            br200
-            width={250}
-            height={250}
-            style={{ 
-              shadowColor: Colors.grey40, 
-              shadowOpacity: 0.15, 
-              shadowRadius: 20, 
-              elevation: 8,
-              overflow: 'hidden'
-            }}
-          >
-            <LinearGradient
-              colors={fastingState.isActive ? Colors.successGradient : [Colors.grey20, Colors.grey30]}
+            {/* Enhanced Streak Card */}
+            <View 
               style={{
-                width: 250,
-                height: 250,
-                borderRadius: 125,
-                justifyContent: 'center',
-                alignItems: 'center',
+                backgroundColor: Colors.white,
+                borderRadius: 20,
+                padding: 20,
+                marginBottom: 32,
+                shadowColor: Colors.grey40,
+                shadowOpacity: 0.08,
+                shadowRadius: 12,
+                elevation: 4,
+                borderWidth: stats.currentStreak >= 7 ? 2 : 0,
+                borderColor: stats.currentStreak >= 7 ? Colors.success : 'transparent',
               }}
             >
-              <View
-                bg-white
-                br100
-                width={200}
-                height={200}
-                center
-              >
-                {fastingState.isActive ? (
-                  <View centerH>
-                    <Text h1 grey90 marginB-8>
-                      {formatTimeDetailed(progress.elapsedMs)}
-                    </Text>
-                    <Text body1 success marginB-4>
-                      {Math.floor(progress.percentage)}% Complete
-                    </Text>
-                    <Text caption grey60>
-                      {formatTime(progress.remaining)} remaining
-                    </Text>
-                  </View>
-                ) : (
-                  <View centerH>
-                    <Text h2 grey80 marginB-8>
-                      Ready to Fast
-                    </Text>
-                    <Text body2 grey60 center style={{ maxWidth: 160 }}>
-                      {fastingState.selectedPlan.description}
-                    </Text>
-                  </View>
+              {stats.currentStreak >= 7 && (
+                <View centerH marginB-12>
+                  <Text caption success style={{ fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    🔥 ON FIRE!
+                  </Text>
+                </View>
+              )}
+              
+              <View row center gap-20>
+                <View centerH flex>
+                  <Text h2 primary style={{ fontWeight: '700' }}>
+                    {stats.currentStreak}
+                  </Text>
+                  <Text caption grey60 style={{ fontWeight: '500' }}>Current Streak</Text>
+                </View>
+                
+                <View width={2} height={40} style={{ backgroundColor: Colors.grey20, borderRadius: 1 }} />
+                
+                <View centerH flex>
+                  <Text h2 secondary style={{ fontWeight: '700' }}>
+                    {stats.longestStreak}
+                  </Text>
+                  <Text caption grey60 style={{ fontWeight: '500' }}>Personal Best</Text>
+                </View>
+                
+                <View width={2} height={40} style={{ backgroundColor: Colors.grey20, borderRadius: 1 }} />
+                
+                <View centerH flex>
+                  <Text h2 accent style={{ fontWeight: '700' }}>
+                    {Math.round((stats.completedSessions / Math.max(stats.totalSessions, 1)) * 100)}%
+                  </Text>
+                  <Text caption grey60 style={{ fontWeight: '500' }}>Success Rate</Text>
+                </View>
+              </View>
+              
+              {stats.currentStreak > 0 && (
+                <View centerH marginT-16 paddingT-16 style={{ borderTopWidth: 1, borderTopColor: Colors.grey20 }}>
+                  <Text caption grey70>
+                    {stats.currentStreak === 1 
+                      ? "Great start! Keep going tomorrow 💪" 
+                      : `${stats.currentStreak} days of dedication! Keep it up! 🌟`}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Main Circular Timer */}
+            <View centerH marginB-40>
+              <StaticCircularTimer
+                progress={progress.percentage}
+                isActive={fastingState.isActive}
+                onPress={fastingState.isActive ? handleStopFasting : handleStartFasting}
+                timeText={fastingState.isActive ? formatTimeDetailed(progress.elapsedMs || 0) : "Ready"}
+                statusText={
+                  fastingState.isActive 
+                    ? `${Math.floor(progress.percentage)}% Complete`
+                    : "Tap to start fasting"
+                }
+                remainingText={
+                  fastingState.isActive 
+                    ? `${formatTime(progress.remaining)} remaining`
+                    : undefined
+                }
+              />
+            </View>
+
+            {/* Plan Selection Chips */}
+            {!fastingState.isActive && (
+              <View centerH marginB-20>
+                <Text h6 grey70 marginB-16>
+                  Fasting Plans
+                </Text>
+                <View row center style={{ flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+                  {availablePlans.map((plan) => {
+                    const isSelected = fastingState.selectedPlan.id === plan.id;
+                    return (
+                      <TouchableOpacity
+                        key={plan.id}
+                        onPress={() => handlePlanSelect(plan)}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: isSelected ? Colors.primary : Colors.white,
+                            borderRadius: 25,
+                            paddingHorizontal: 20,
+                            paddingVertical: 12,
+                            borderWidth: 2,
+                            borderColor: isSelected ? Colors.primary : Colors.grey30,
+                            shadowColor: isSelected ? Colors.primary : Colors.grey40,
+                            shadowOpacity: isSelected ? 0.3 : 0.1,
+                            shadowRadius: isSelected ? 8 : 4,
+                            elevation: isSelected ? 6 : 2,
+                            minWidth: 80,
+                            alignItems: 'center',
+                            transform: [{ scale: isSelected ? 1.05 : 1 }],
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: isSelected ? Colors.white : Colors.grey70,
+                              fontWeight: isSelected ? '700' : '600',
+                              fontSize: 15,
+                            }}
+                          >
+                            {plan.name}
+                          </Text>
+                          {isSelected && (
+                            <Text
+                              style={{
+                                color: Colors.white,
+                                fontSize: 10,
+                                marginTop: 2,
+                                fontWeight: '500',
+                                opacity: 0.8,
+                              }}
+                            >
+                              ✓ Selected
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                
+                {fastingState.selectedPlan.id === 'custom' && (
+                  <Text caption grey60 center marginT-8>
+                    Tap Custom again to edit your plan
+                  </Text>
                 )}
               </View>
-            </LinearGradient>
-          </Card>
-        </Animated.View>
-      </View>
-
-      {/* Plan Selection */}
-      {!fastingState.isActive && (
-        <View marginB-30>
-          <Text h5 grey80 marginB-16 center>Choose Fasting Plan</Text>
-          <Carousel
-            containerStyle={{ height: 80 }}
-            pageControlProps={{
-              size: 6,
-              spacing: 8,
-              color: Colors.grey40,
-              inactiveColor: Colors.grey30,
-            }}
-            showCounter={false}
-            autoplay={false}
-          >
-            {availablePlans.map((plan) => (
-              <TouchableOpacity
-                key={plan.id}
-                onPress={() => handlePlanSelect(plan)}
-                style={{ marginHorizontal: 8 }}
-              >
-                <Card
-                  padding-16
-                  br20
-                  centerH
-                  bg-white
-                  style={{
-                    minWidth: 100,
-                    shadowColor: Colors.grey40,
-                    shadowOpacity: fastingState.selectedPlan.id === plan.id ? 0.2 : 0.1,
-                    shadowRadius: 8,
-                    elevation: fastingState.selectedPlan.id === plan.id ? 6 : 3,
-                    borderWidth: fastingState.selectedPlan.id === plan.id ? 2 : 0,
-                    borderColor: fastingState.selectedPlan.id === plan.id ? Colors.primary : 'transparent',
-                  }}
-                >
-                  <Text 
-                    h6 
-                    style={{ color: fastingState.selectedPlan.id === plan.id ? Colors.primary : Colors.grey80 }}
-                    marginB-4
-                  >
-                    {plan.name}
-                  </Text>
-                  {plan.id === 'custom' && (
-                    <Text caption grey50>
-                      Tap to edit
-                    </Text>
-                  )}
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </Carousel>
-        </View>
-      )}
-
-      {/* Action Button */}
-      <View centerH>
-        <Button
-          label={fastingState.isActive ? 'End Fast' : 'Start Fasting'}
-          size="large"
-          borderRadius={30}
-          paddingH-48
-          paddingV-16
-          backgroundColor={fastingState.isActive ? Colors.warning : Colors.success}
-          labelStyle={{ 
-            color: Colors.white, 
-            fontSize: 18, 
-            fontWeight: '600' 
-          }}
-          style={{
-            minWidth: 200,
-            shadowColor: fastingState.isActive ? Colors.warning : Colors.success,
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 6,
-          }}
-          onPress={fastingState.isActive ? handleStopFasting : handleStartFasting}
-        />
-      </View>
+            )}
+          </Animated.View>
+        </ScrollView>
+      </LinearGradient>
 
       <CustomPlanModal
         visible={showCustomModal}
         onClose={() => setShowCustomModal(false)}
         onSave={handleCustomPlanSave}
-        currentPlan={fastingState.customPlan}
+        currentPlan={fastingState.customPlan || undefined}
       />
     </View>
   );
 }
-
-// All styles are now handled by UI Lib components and theme

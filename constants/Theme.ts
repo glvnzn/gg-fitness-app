@@ -82,8 +82,9 @@ export const FastingSpacings = {
 
 // Apply theme
 export const setupTheme = () => {
-  // Load UI Lib colors
-  Colors.loadColors(FastingColors);
+  // Load UI Lib colors (excluding gradient arrays)
+  const { primaryGradient, secondaryGradient, accentGradient, successGradient, ...colors } = FastingColors;
+  Colors.loadColors(colors);
   
   // Load UI Lib typography
   Typography.loadTypographies(FastingTypography);

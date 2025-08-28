@@ -73,10 +73,10 @@ export default function HistoryScreen() {
       <Animated.View style={[itemStyle]}>
         <Card 
           padding-16 
-          br16 
           bg-white 
           marginB-12
           style={{ 
+            borderRadius: 16,
             shadowColor: Colors.grey40, 
             shadowOpacity: 0.08, 
             shadowRadius: 12, 
@@ -106,7 +106,7 @@ export default function HistoryScreen() {
           <View gap-8>
             <View row spread centerV>
               <View row centerV>
-                <View width={6} height={6} br3 bg-primary marginR-8 />
+                <View width={6} height={6} style={{ borderRadius: 3 }} bg-primary marginR-8 />
                 <Text caption grey60>Started</Text>
               </View>
               <Text caption grey90 style={{ fontWeight: '600' }}>
@@ -118,7 +118,7 @@ export default function HistoryScreen() {
               <>
                 <View row spread centerV>
                   <View row centerV>
-                    <View width={6} height={6} br3 bg-secondary marginR-8 />
+                    <View width={6} height={6} style={{ borderRadius: 3 }} bg-secondary marginR-8 />
                     <Text caption grey60>Ended</Text>
                   </View>
                   <Text caption grey90 style={{ fontWeight: '600' }}>
@@ -128,7 +128,7 @@ export default function HistoryScreen() {
                 
                 <View row spread centerV>
                   <View row centerV>
-                    <View width={6} height={6} br3 bg-accent marginR-8 />
+                    <View width={6} height={6} style={{ borderRadius: 3 }} bg-accent marginR-8 />
                     <Text caption grey60>Duration</Text>
                   </View>
                   <Text caption grey90 style={{ fontWeight: '600' }}>
@@ -140,7 +140,7 @@ export default function HistoryScreen() {
             
             <View row spread centerV paddingT-8 style={{ borderTopWidth: 1, borderTopColor: Colors.grey20 }}>
               <View row centerV>
-                <View width={6} height={6} br3 bg-warning marginR-8 />
+                <View width={6} height={6} style={{ borderRadius: 3 }} bg-warning marginR-8 />
                 <Text caption grey60>Goal</Text>
               </View>
               <Text caption grey90 style={{ fontWeight: '600' }}>

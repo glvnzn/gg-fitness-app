@@ -19,7 +19,7 @@ export function CustomPlanModal({ visible, onClose, onSave, currentPlan }: Custo
 
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'border');
+  const borderColor = useThemeColor({ light: '#E0E0E0', dark: '#404040' }, 'text');
 
   const handleSave = () => {
     const fasting = parseInt(fastingHours);
