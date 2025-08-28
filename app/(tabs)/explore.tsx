@@ -1,110 +1,224 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { ScrollView } from 'react-native';
+import { 
+  View, 
+  Text, 
+  Card, 
+  Colors,
+  Badge,
+  TextField
+} from 'react-native-ui-lib';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring,
+  withDelay
+} from 'react-native-reanimated';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { useFasting } from '@/hooks/useFasting';
+import { FastingSession } from '@/types/fasting';
 
-export default function TabTwoScreen() {
+export default function HistoryScreen() {
+  const { history } = useFasting();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  
+  // Animation for list items
+  const listAnimation = useSharedValue(0);
+  
+  React.useEffect(() => {
+    listAnimation.value = withSpring(1);
+  }, [listAnimation]);
+
+  const listStyle = useAnimatedStyle(() => ({
+    opacity: listAnimation.value,
+    transform: [{ translateY: (1 - listAnimation.value) * 50 }],
+  }));
+
+  const filteredHistory = history.filter(session => {
+    if (!searchQuery) return true;
+    return session.plan.name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
+  };
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const formatDuration = (startTime: number, endTime: number) => {
+    const duration = endTime - startTime;
+    const hours = Math.floor(duration / (1000 * 60 * 60));
+    const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  const HistoryItem = ({ session, index }: { session: FastingSession, index: number }) => {
+    const itemAnimation = useSharedValue(0);
+    
+    React.useEffect(() => {
+      itemAnimation.value = withDelay(index * 50, withSpring(1));
+    }, [itemAnimation, index]);
+
+    const itemStyle = useAnimatedStyle(() => ({
+      opacity: itemAnimation.value,
+      transform: [{ translateX: (1 - itemAnimation.value) * 100 }],
+    }));
+
+    return (
+      <Animated.View style={[itemStyle]}>
+        <Card 
+          padding-16 
+          br16 
+          bg-white 
+          marginB-12
+          style={{ 
+            shadowColor: Colors.grey40, 
+            shadowOpacity: 0.08, 
+            shadowRadius: 12, 
+            elevation: 4 
+          }}
+        >
+          <View row spread centerV marginB-12>
+            <Text h6 grey90>
+              {session.plan.name} Fast
+            </Text>
+            <Badge
+              backgroundColor={session.completed ? Colors.success : Colors.error}
+              borderWidth={0}
+              paddingH-8
+              paddingV-4
+            >
+              <Text caption white style={{ fontWeight: '600' }}>
+                {session.completed ? 'Completed' : 'Cancelled'}
+              </Text>
+            </Badge>
+          </View>
+          
+          <Text body2 grey70 marginB-12>
+            {formatDate(session.startTime)}
+          </Text>
+          
+          <View gap-8>
+            <View row spread centerV>
+              <View row centerV>
+                <View width={6} height={6} br3 bg-primary marginR-8 />
+                <Text caption grey60>Started</Text>
+              </View>
+              <Text caption grey90 style={{ fontWeight: '600' }}>
+                {formatTime(session.startTime)}
+              </Text>
+            </View>
+            
+            {session.endTime && (
+              <>
+                <View row spread centerV>
+                  <View row centerV>
+                    <View width={6} height={6} br3 bg-secondary marginR-8 />
+                    <Text caption grey60>Ended</Text>
+                  </View>
+                  <Text caption grey90 style={{ fontWeight: '600' }}>
+                    {formatTime(session.endTime)}
+                  </Text>
+                </View>
+                
+                <View row spread centerV>
+                  <View row centerV>
+                    <View width={6} height={6} br3 bg-accent marginR-8 />
+                    <Text caption grey60>Duration</Text>
+                  </View>
+                  <Text caption grey90 style={{ fontWeight: '600' }}>
+                    {formatDuration(session.startTime, session.endTime)}
+                  </Text>
+                </View>
+              </>
+            )}
+            
+            <View row spread centerV paddingT-8 style={{ borderTopWidth: 1, borderTopColor: Colors.grey20 }}>
+              <View row centerV>
+                <View width={6} height={6} br3 bg-warning marginR-8 />
+                <Text caption grey60>Goal</Text>
+              </View>
+              <Text caption grey90 style={{ fontWeight: '600' }}>
+                {Math.floor(session.goalDuration / 60)}h {session.goalDuration % 60}m
+              </Text>
+            </View>
+          </View>
+        </Card>
+      </Animated.View>
+    );
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <View flex bg-grey10 padding-20>
+      {/* Header */}
+      <View centerH marginB-20 marginT-20>
+        <Text h1 grey90 marginB-8>Fasting History</Text>
+        <Text body1 grey60>
+          {history.length} {history.length === 1 ? 'session' : 'sessions'}
+        </Text>
+      </View>
+
+      {/* Search Bar */}
+      {history.length > 0 && (
+        <View marginB-20>
+          <TextField
+            placeholder="Search by plan type..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            leadingAccessory={
+              <View width={20} height={20} center>
+                <Text caption grey50>🔍</Text>
+              </View>
+            }
+            fieldStyle={{
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderRadius: 12,
+              backgroundColor: Colors.white,
+              borderWidth: 1,
+              borderColor: Colors.grey30,
+            }}
+            style={{ 
+              fontSize: 16,
+              color: Colors.grey90
+            }}
+          />
+        </View>
+      )}
+
+      <Animated.View style={[listStyle, { flex: 1 }]}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {filteredHistory.length === 0 ? (
+            <Card padding-40 br20 bg-white style={{ shadowColor: Colors.grey40, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }}>
+              <View centerH>
+                <Text h5 grey70 marginB-12>
+                  {history.length === 0 ? 'No fasting history yet' : 'No matching sessions'}
+                </Text>
+                <Text body2 grey60 center>
+                  {history.length === 0 
+                    ? 'Start your first fast from the Timer tab to see your progress here.'
+                    : 'Try adjusting your search query to find specific fasting sessions.'
+                  }
+                </Text>
+              </View>
+            </Card>
+          ) : (
+            <View>
+              {filteredHistory.map((session, index) => (
+                <HistoryItem key={session.id} session={session} index={index} />
+              ))}
+              <View height={40} />
+            </View>
+          )}
+        </ScrollView>
+      </Animated.View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-});
+// All styles are now handled by UI Lib components and theme
